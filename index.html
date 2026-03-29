@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Money Snake: War Edition</title>
+    <title>Money Snake Pro</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
-        body { background: #000; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-        #ui { position: fixed; top: 15px; left: 15px; color: #FFD700; font-size: 24px; font-weight: bold; z-index: 10; text-shadow: 2px 2px #000; }
-        #btn-retirar { position: fixed; top: 15px; right: 15px; background: #FFD700; color: #000; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; z-index: 10; }
+        body { background: #000; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui-top { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
+        .stat-box { color: #FFD700; font-size: 20px; font-weight: bold; text-shadow: 0 0 10px #B8860B; }
+        #recharge-btn { background: #FFD700; color: #000; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-    <div id="ui">Tu Saldo: $<span id="balance">1.00</span></div>
-    <button id="btn-retirar" onclick="alert('Retiro mínimo $5.00 USD')">RETIRAR</button>
+
+    <div id="ui-top">
+        <div class="stat-box">SALDO: $<span id="balance">1.00</span></div>
+        <button id="recharge-btn" onclick="window.location.href='https://wa.me/TUNUMERODEWHATSAPP?text=Hola, quiero recargar saldo para Money Snake'">RECARGAR</button>
+    </div>
 
     <script>
         const config = {
@@ -27,81 +32,70 @@
         };
 
         const game = new Phaser.Game(config);
-        let player, playerSegments = [], enemies = [], foodGroup, score = 1.00;
+        let player, segments = [], score = 1.00;
 
         function preload() {
             let g = this.make.graphics({x: 0, y: 0, add: false});
-            // Textura cabeza jugador (Oro)
-            g.fillStyle(0xffd700, 1).fillCircle(15, 15, 15);
+            // Cabeza Dorada con Brillo
+            g.fillStyle(0xFFD700, 1).fillCircle(15, 15, 15);
+            g.lineStyle(2, 0xFFFFFF, 0.5).strokeCircle(15, 15, 12);
             g.generateTexture('head', 30, 30);
-            // Textura cuerpo jugador
-            g.clear().fillStyle(0xffd700, 0.8).fillCircle(10, 10, 10);
-            g.generateTexture('body', 20, 20);
-            // Textura enemigos (Rojo/Varios)
-            g.clear().fillStyle(0xff4444, 1).fillCircle(15, 15, 15);
-            g.generateTexture('enemyHead', 30, 30);
-            // Comida (Monedas)
-            g.clear().fillStyle(0x00ff00, 1).fillCircle(8, 8, 8);
+            
+            // Cuerpo de "Escamas"
+            g.clear().fillStyle(0xB8860B, 0.8).fillCircle(12, 12, 12);
+            g.generateTexture('body', 24, 24);
+
+            // Comida (Puntos de luz)
+            g.clear().fillStyle(0x00FF00, 1).fillCircle(8, 8, 8);
             g.generateTexture('coin', 16, 16);
         }
 
         function create() {
-            foodGroup = this.physics.add.group();
-
-            // Crear Jugador
             player = this.physics.add.image(window.innerWidth/2, window.innerHeight/2, 'head');
             player.setCollideWorldBounds(true);
-            playerSegments.push(player);
-
-            // Crear Enemigos (Bots)
-            for(let i=0; i<4; i++) {
-                let en = this.physics.add.image(Phaser.Math.Between(100, 500), Phaser.Math.Between(100, 500), 'enemyHead');
-                en.setTint(Phaser.Math.Between(0xaaaaaa, 0xffffff));
-                enemies.push(en);
+            
+            // Creamos 5 segmentos iniciales para que se vea larga desde el inicio
+            for(let i=0; i<5; i++) {
+                addSegment.call(this);
             }
 
-            // Colisiones
-            this.physics.add.overlap(player, foodGroup, eatCoin, null, this);
-            this.physics.add.collider(player, enemies, (p, e) => {
-                alert("CHOCASTE DE FRENTE. Perdiste tu dólar.");
-                location.reload();
-            });
-
-            // Control táctil
             this.input.on('pointermove', (pointer) => {
                 this.physics.moveToObject(player, pointer, 220);
+            });
+
+            // Monedas infinitas para la demo
+            this.food = this.physics.add.group();
+            for(let i=0; i<15; i++) { spawnFood.call(this); }
+            this.physics.add.overlap(player, this.food, (p, f) => {
+                f.destroy();
+                score += 0.01;
+                document.getElementById('balance').innerText = score.toFixed(2);
+                addSegment.call(this);
+                spawnFood.call(this);
             });
         }
 
         function update() {
-            // Efecto de seguimiento de la cola
-            for (let i = playerSegments.length - 1; i > 0; i--) {
-                playerSegments[i].x = playerSegments[i-1].x;
-                playerSegments[i].y = playerSegments[i-1].y;
+            // Movimiento fluido de los segmentos
+            for (let i = segments.length - 1; i > 0; i--) {
+                segments[i].x = segments[i-1].x;
+                segments[i].y = segments[i-1].y;
             }
-
-            // Movimiento simple de enemigos
-            enemies.forEach(en => {
-                if (Phaser.Math.Between(0, 100) > 98) {
-                    en.setVelocity(Phaser.Math.Between(-150, 150), Phaser.Math.Between(-150, 150));
-                }
-            });
-
-            // Generar monedas al azar si hay pocas
-            if (foodGroup.countActive() < 10) {
-                foodGroup.create(Phaser.Math.Between(20, window.innerWidth-20), Phaser.Math.Between(20, window.innerHeight-20), 'coin');
+            if(segments.length > 0) {
+                segments[0].x = player.x;
+                segments[0].y = player.y;
             }
         }
 
-        function eatCoin(p, coin) {
-            coin.destroy();
-            score += 0.05; // Cada moneda suma centavos al dólar
-            document.getElementById('balance').innerText = score.toFixed(2);
-            
-            // Crecer agregando un nuevo segmento
-            let lastSeg = playerSegments[playerSegments.length - 1];
-            let newSeg = this.physics.add.image(lastSeg.x, lastSeg.y, 'body');
-            playerSegments.push(newSeg);
+        function addSegment() {
+            let x = player ? player.x : 0;
+            let y = player ? player.y : 0;
+            let seg = this.add.image(x, y, 'body');
+            segments.push(seg);
+        }
+
+        function spawnFood() {
+            this.food.create(Phaser.Math.Between(30, window.innerWidth-30), Phaser.Math.Between(30, window.innerHeight-30), 'coin');
         }
     </script>
 </body>
