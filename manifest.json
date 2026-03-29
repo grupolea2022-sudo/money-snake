@@ -1,1 +1,23 @@
 
+{
+  "short_name": "MoneySnake",
+  "name": "Money Snake: El Juego del Dólar",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#000000",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#FFD700",
+  "description": "El juego de destreza donde tu culebra crece con dólares reales."
+}
