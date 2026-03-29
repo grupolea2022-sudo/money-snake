@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Money Snake Beta</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        body { background: #000; margin: 0; padding: 0; overflow: hidden; color: gold; font-family: 'Arial', sans-serif; }
+        #game-container { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #ui-layer { position: fixed; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
+        .stat { font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; }
+        #footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 12px; color: #555; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="stat">Saldo: $1.00 USD</div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div id="footer">Modo Beta: Los puntos valen dinero real. Comisión de retiro: 1%.</div>
+
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            parent: 'game-container',
+            backgroundColor: '#0a0a0a',
+            physics: { default: 'arcade', arcade: { debug: false } },
+            scene: { preload, create, update }
+        };
+
+        const game = new Phaser.Game(config);
+        let player, food, cursors;
+
+        function preload() {
+            // Usamos círculos básicos por ahora para no depender de imágenes externas
+            let graphics = this.make.graphics({x: 0, y: 0, add: false});
+            graphics.fillStyle(0xffd700, 1); // Color Oro
+            graphics.fillCircle(15, 15, 15);
+            graphics.generateTexture('head', 30, 30);
+
+            graphics.clear();
+            graphics.fillStyle(0xffffff, 1); // Color Blanco para comida
+            graphics.fillCircle(10, 10, 10);
+            graphics.generateTexture('food', 20, 20);
+        }
+
+        function create() {
+            // Crear comida en lugar aleatorio
+            food = this.physics.add.image(
+                Phaser.Math.Between(50, window.innerWidth - 50),
+                Phaser.Math.Between(50, window.innerHeight - 50),
+                'food'
+            );
+
+            // Crear cabeza de la culebra
+            player = this.physics.add.image(window.innerWidth/2, window.innerHeight/2, 'head');
+            player.setCollideWorldBounds(true);
+
+            // Detectar cuando la culebra toca la comida
+            this.physics.add.overlap(player, food, collectFood, null, this);
+
+            // Control táctil: La culebra sigue a tu dedo
+            this.input.on('pointermove', function (pointer) {
+                this.physics.moveToObject(player, pointer, 250);
+            }, this);
+        }
+
+        function update() {
+            // La rotación hace que se vea más natural al moverse
+            if (player.body.speed > 0) {
+                player.rotation = Phaser.Math.Angle.Between(player.x, player.y, this.input.activePointer.x, this.input.activePointer.y);
+            }
+        }
+
+        function collectFood(player, targetFood) {
+            // Mover la comida a otro lugar
+            targetFood.setPosition(
+                Phaser.Math.Between(50, window.innerWidth - 50),
+                Phaser.Math.Between(50, window.innerHeight - 50)
+            );
+            
+            // Efecto de crecimiento visual rápido
+            player.setScale(player.scale + 0.05);
+            
+            // Sonido visual o alerta
+            console.log("¡Comiste dinero!");
+        }
+    </script>
+</body>
+</html>
